@@ -1,0 +1,17 @@
+{application, hello_pubsub,
+ [
+  {description, "Hello Publisher Subscriber"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  hello
+                 ]},
+  {mod, { hello_pubsub_app, []}},
+  {env, [
+         {listener_url, "http://127.0.0.1:8081"},
+         {connect_to, local},
+         {sink, local}
+        ]}
+ ]}.
