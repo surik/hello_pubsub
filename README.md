@@ -40,10 +40,10 @@ hello_pubsub_client:subscribe(<<"/root">>, <<"sub_1">>,
 hello_pubsub_client:publish(<<"/root/event1">>, <<"message">>),
 
 % prints "got <<"message1">>"
-hello_pubsub_client:publish(<<"/root>>, <<"message1">>),
+hello_pubsub_client:publish(<<"/root">>, <<"message1">>),
 
 % prints nothing because here isn't subscription for 'another_root'
-hello_pubsub_client:publish(<<"/another_root>>, <<"message">>),
+hello_pubsub_client:publish(<<"/another_root">>, <<"message">>),
 
 hello_pubsub_client:unsubscribe(<<"sub_1">>).
 
