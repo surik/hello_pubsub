@@ -106,7 +106,8 @@ call(Client, Req) -> hello_client:call(Client, Req).
     
 parse_topic(Topic) ->
     [binary_to_atom(Bin, utf8) 
-     || Bin <- binary:split(Topic, <<"/">>, [global, trim_all])].
+     || Bin <- binary:split(Topic, <<"/">>, [global, trim]), 
+        Bin /= <<"">>].
 
 get_client(Sink) ->
     case ets:lookup(?HELLO_PUBSUB_CLIENTS_TAB, Sink) of
