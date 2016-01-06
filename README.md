@@ -1,6 +1,6 @@
 # Hello PubSub [![Build Status](https://travis-ci.org/surik/hello_pubsub.svg)](https://travis-ci.org/surik/hello_pubsub)
 
-Publisher-Subscriber implementation over [hello](https://github.com/travelping/hello).
+Publisher-Subscriber implementation over [hello](https://github.com/travelping/hello) framework.
 
 # Building and installing
 
@@ -14,7 +14,7 @@ You can use `hello_pubsub` in your own project:
         {hello_pubsub, ".*", {git, "https://github.com/surik/hello_pubsub.git", "master"}}
     ]}.
 
-    and ensure `hello_pubsub` is starder before your application:
+and ensure `hello_pubsub` is starder before your application:
 
     {applications, [hello_pubsub]}.
 
