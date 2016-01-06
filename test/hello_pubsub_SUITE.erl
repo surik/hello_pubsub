@@ -10,11 +10,15 @@
 
 %% Test cases
 -export([subscribe/1,
+         invalid_subscribe/1,
          list/1,
+         invalid_publish/1,
          publish/1,
-         unsubscribe/1]).
+         unsubscribe/1,
+         invalid_unsubscribe/1]).
 
 -include_lib("common_test/include/ct.hrl").
+-include_lib("eunit/include/eunit.hrl").
 
 %%%===================================================================
 %%% Common Test callbacks
@@ -25,8 +29,14 @@ all() ->
      {group, remote}].
 
 groups() -> 
-    [{local, [sequence], [subscribe, list, publish, unsubscribe]},
-     {remote, [sequence], [subscribe, list, publish, unsubscribe]}].
+    [{local, [sequence], cases()},
+     {remote, [sequence], cases()}].
+
+cases() ->
+    [subscribe, invalid_subscribe, 
+     list, 
+     publish, invalid_publish, 
+     unsubscribe, invalid_unsubscribe].
 
 init_per_suite(Config) ->
     Config.
@@ -55,12 +65,19 @@ end_per_group(Group, _Config) ->
 %%%===================================================================
 
 subscribe(_Config) ->
-    ok = hello_pubsub_client:subscribe(<<"test">>, <<"sub_1">>, 
-                                       fun(Msg) -> ct:pal("got ~p", [Msg]) end),
-    ok = hello_pubsub_client:subscribe(<<"test/event2">>, <<"sub_2">>, 
-                                       fun(Msg) -> ct:pal("2 got ~p", [Msg]) end),
-    ok = hello_pubsub_client:subscribe(<<"test/event3">>, <<"sub_3">>, 
-                                       fun(Msg) -> ct:pal("3 got ~p", [Msg]) end),
+    ok, hello_pubsub_client:subscribe(<<"test">>, <<"sub_1">>, 
+                                      fun(Msg) -> ct:pal("got ~p", [Msg]) end),
+    ok, hello_pubsub_client:subscribe(<<"test/event2">>, <<"sub_2">>, 
+                                      fun(Msg) -> ct:pal("2 got ~p", [Msg]) end),
+    ok, hello_pubsub_client:subscribe(<<"test/event3">>, <<"sub_3">>, 
+                                      fun(Msg) -> ct:pal("3 got ~p", [Msg]) end),
+    ok.
+
+invalid_subscribe(_Config) ->
+    ?assertError(badarg, hello_pubsub_client:subscribe("test", fun(Msg) -> ct:pal("got ~p", [Msg]) end)),
+    ?assertError(badarg, hello_pubsub_client:subscribe(<<"test">>, not_fun)),
+    ?assertError(badarg, hello_pubsub_client:subscribe(<<"test">>, "sub_1",
+                                                       fun(Msg) -> ct:pal("got ~p", [Msg]) end)),
     ok.
 
 list(_Config) ->
@@ -74,10 +91,18 @@ publish(_Config) ->
     timer:sleep(500),
     ok.
 
+invalid_publish(_Config) ->
+    ?assertError(badarg, hello_pubsub_client:publish("test/event2", <<"message2">>)),
+    ok.
+
 unsubscribe(_Config) ->
     ok = hello_pubsub_client:unsubscribe(<<"sub_1">>),
     ok = hello_pubsub_client:unsubscribe(<<"sub_2">>),
     1 = length(hello_pubsub_client:list()),
     ok = hello_pubsub_client:unsubscribe(<<"sub_3">>),
     0 = length(hello_pubsub_client:list()),
+    ok.
+
+invalid_unsubscribe(_Config) ->
+    ?assertError(badarg, hello_pubsub_client:unsubscribe("test/event2")),
     ok.

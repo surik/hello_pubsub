@@ -80,42 +80,50 @@ subscribe(Topic, Fun) ->
 
 -spec subscribe(binary(), binary(), function()) -> ok | {error, term()}.
 subscribe(Topic, Name, Fun) -> 
-    DefaultSink = application:get_env(hello_pubsub, sink, local),
-    subscribe(Topic, Name, Fun, DefaultSink).
+    DefaultSink = application:get_env(hello_pubsub, sink, "local"),
+    subscribe(Topic, Name, Fun, hello_lib:to_binary(DefaultSink)).
 
--spec subscribe(binary(), binary(), function(), binary()) -> ok | {error, term()}.
-subscribe(Topic, Name, Fun, Sink) -> 
+-spec subscribe(binary(), binary(), function(), binary() | string()) -> 
+    ok | {error, term()}.
+subscribe(Topic, Name, Fun, Sink0) 
+  when is_binary(Topic), is_binary(Name), is_function(Fun) -> 
+    Sink = hello_lib:to_binary(Sink0),
     case call(<<"Pubsub.Subscribe">>, #{topic => Topic, name => Name, sink => Sink}) of
         ok -> 
             true = ets:insert_new(?HELLO_CLIENT_PUBSUB_TAB, {Name, Topic, Fun}),
             ok;
         Error -> Error
-    end.
+    end;
+subscribe(_, _, _, _) -> error(badarg).
 
 -spec unsubscribe(binary()) -> ok | {error, term()}.
-unsubscribe(Name) -> 
+unsubscribe(Name) when is_binary(Name) ->
     case call(<<"Pubsub.Unsubscribe">>, #{name => Name}) of
         ok -> 
             true = ets:delete(?HELLO_CLIENT_PUBSUB_TAB, Name),
             ok;
         Error -> Error
-    end.
+    end;
+unsubscribe(_) -> error(badarg).
 
 -spec unsubscribe_topic(binary()) -> ok | {error, term()}.
-unsubscribe_topic(Topic) -> 
-    call(<<"Pubsub.Unsubscribe">>, #{topic => Topic}).
+unsubscribe_topic(Topic) when is_binary(Topic) -> 
+    call(<<"Pubsub.Unsubscribe">>, #{topic => Topic});
+unsubscribe_topic(_) -> error(badarg).
 
 -spec list() -> list().
 list() -> call(<<"Pubsub.List">>, []).
 
 -spec list(binary()) -> list().
-list(Topic) -> 
-    call(<<"Pubsub.List">>, #{topic => Topic}).
+list(Topic) when is_binary(Topic) -> 
+    call(<<"Pubsub.List">>, #{topic => Topic});
+list(_) -> error(badarg).
 
 -spec publish(binary(), term()) -> ok.
-publish(Topic, Message) ->
+publish(Topic, Message) when is_binary(Topic) ->
     call(<<"Pubsub.Publish">>, #{topic => Topic, 
-                                 message => Message}).
+                                 message => Message});
+publish(_, _) -> error(badarg).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

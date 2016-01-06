@@ -36,9 +36,7 @@ router_key() -> 'Pubsub'.
  
 validation() -> ?MODULE.
 
-request(_Module, Method, Params) -> 
-    io:format("~p / ~p~n", [Method, Params]),
-    {ok, Method, Params}.
+request(_Module, Method, Params) -> {ok, Method, Params}.
  
 init(_Identifier, _HandlerArgs) -> 
     {ok, []}.
@@ -68,8 +66,7 @@ subscribe(#{<<"name">> := Name, <<"topic">> := Topic, <<"sink">> := Sink}) ->
     case ets:insert_new(?HELLO_PUBSUB_TAB, {Name, parse_topic(Topic), Sink}) of
         true -> 
             if Sink /= <<"local">> -> 
-                io:format("~p~n", [Sink /= <<"local">>]), 
-                {ok, Pid} = hello_client:start(Sink, [], [], []),
+                {ok, Pid} = hello_client:start(binary_to_list(Sink), [], [], []),
                 ets:insert(?HELLO_PUBSUB_CLIENTS_TAB, {Sink, Pid});
             true -> skip
             end,
@@ -79,7 +76,7 @@ subscribe(#{<<"name">> := Name, <<"topic">> := Topic, <<"sink">> := Sink}) ->
 
 unsubscribe(#{<<"name">> := Name}) -> 
     {ok, true == ets:delete(?HELLO_PUBSUB_TAB, Name) andalso ok};
-unsubscribe(#{<<"topic">> := Topic}) -> {ok, no_implemented}.
+unsubscribe(#{<<"topic">> := _Topic}) -> {ok, no_implemented}.
 
 list() ->
     [#{name => Name, topic => Topic, sink => Sink} 
