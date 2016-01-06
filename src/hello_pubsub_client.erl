@@ -112,7 +112,7 @@ unsubscribe_topic(Topic) when is_binary(Topic) ->
 unsubscribe_topic(_) -> error(badarg).
 
 -spec list() -> list().
-list() -> call(<<"Pubsub.List">>, []).
+list() -> call(<<"Pubsub.List">>, #{}).
 
 -spec list(binary()) -> list().
 list(Topic) when is_binary(Topic) -> 

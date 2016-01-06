@@ -15,7 +15,8 @@
          invalid_publish/1,
          publish/1,
          unsubscribe/1,
-         invalid_unsubscribe/1]).
+         invalid_unsubscribe/1,
+         pubsub_validation/1]).
 
 -include_lib("common_test/include/ct.hrl").
 -include_lib("eunit/include/eunit.hrl").
@@ -26,7 +27,8 @@
 
 all() ->
     [{group, local}, 
-     {group, remote}].
+     {group, remote},
+     pubsub_validation].
 
 groups() -> 
     [{local, [sequence], cases()},
@@ -105,4 +107,43 @@ unsubscribe(_Config) ->
 
 invalid_unsubscribe(_Config) ->
     ?assertError(badarg, hello_pubsub_client:unsubscribe("test/event2")),
+    ok.
+
+pubsub_validation(_Config) ->
+    Mod = hello_pubsub,
+    SubscrMsg = #{<<"name">> => <<"bin">>, <<"topic">> => <<"bin">>, <<"sink">> => <<"local">>},
+    BadSubscrMsg = #{<<"name">> => "sting", <<"topic">> => "sting", <<"sink">> => "local"},
+    BadSubscrMsg1 = maps:put(<<"name">>, <<"bin">>, BadSubscrMsg),
+    BadSubscrMsg2 = maps:put(<<"topic">>, <<"bin">>, BadSubscrMsg1),
+    BadSubscrMsg3 = maps:put(<<"topic">>, "string", SubscrMsg),
+    PublishMsg = fun(Msg) -> #{<<"topic">> => <<"root">>, <<"message">> => Msg} end,
+
+    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Subscribe">>, #{}),
+    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Subscribe">>, #{<<"unknown_params">> => "fdf"}),
+    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Subscribe">>, BadSubscrMsg),
+    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Subscribe">>, BadSubscrMsg1),
+    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Subscribe">>, BadSubscrMsg2),
+    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Subscribe">>, BadSubscrMsg3),
+    {ok, <<"Pubsub.Subscribe">>, _} = hello_pubsub:request(Mod, <<"Pubsub.Subscribe">>, SubscrMsg),
+
+    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Unsubscribe">>, #{}),
+    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Unsubscribe">>, #{<<"unknown_params">> => "fdf"}),
+    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Unsubscribe">>, #{<<"name">> => "string"}),
+    {ok, <<"Pubsub.Unsubscribe">>, _} = hello_pubsub:request(Mod, <<"Pubsub.Unsubscribe">>, 
+                                                             #{<<"name">> => <<"bin">>}),
+
+    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.List">>, #{<<"topic">> => "topic"}),
+    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.List">>, #{<<"unknown_params">> => "fdf"}),
+    {ok, <<"Pubsub.List">>, _} = hello_pubsub:request(Mod, <<"Pubsub.List">>, #{}),
+    {ok, <<"Pubsub.List">>, _} = hello_pubsub:request(Mod, <<"Pubsub.List">>, #{<<"topic">> => <<"topic">>}),
+
+    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Publish">>, #{}),
+    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Publish">>, #{<<"topic">> => "list"}),
+    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Publish">>, #{<<"topic">> => <<"bin">>}),
+    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Publish">>, #{<<"unknown_params">> => "fdf"}),
+    {ok, <<"Pubsub.Publish">>, _} = hello_pubsub:request(Mod, <<"Pubsub.Publish">>, PublishMsg(<<"message">>)),
+    {ok, <<"Pubsub.Publish">>, _} = hello_pubsub:request(Mod, <<"Pubsub.Publish">>, 
+                                                         PublishMsg(#{<<"payload">> => <<"message">>})),
+
+    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.UndefMethod">>, #{}),
     ok.

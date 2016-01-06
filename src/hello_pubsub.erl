@@ -36,7 +36,37 @@ router_key() -> 'Pubsub'.
  
 validation() -> ?MODULE.
 
-request(_Module, Method, Params) -> {ok, Method, Params}.
+request(_Module, <<"Pubsub.Subscribe">> = Method, 
+        #{<<"name">> := Name, 
+          <<"topic">> := Topic, 
+          <<"sink">> := Sink} = Params) 
+  when is_binary(Name), is_binary(Topic), is_binary(Sink) -> 
+    {ok, Method, Params};
+
+request(_Module, <<"Pubsub.Unsubscribe">> = Method, #{<<"name">> := Name} = Params)
+  when is_binary(Name) ->
+    {ok, Method, Params};
+
+request(_Module, <<"Pubsub.Unsubscribe">> = Method, #{<<"topic">> := Topic} = Params)
+  when is_binary(Topic) ->
+    {ok, Method, Params};
+
+request(_Module, <<"Pubsub.List">> = Method, #{<<"topic">> := Topic} = Params)
+  when is_binary(Topic) ->
+    {ok, Method, Params};
+
+request(_Module, <<"Pubsub.List">> = Method,  Params) 
+  when map_size(Params) == 0 ->
+    {ok, Method, Params};
+
+request(_Module, <<"Pubsub.Publish">> = Method, 
+        #{<<"topic">> := Topic, <<"message">> := _} = Params)
+  when is_binary(Topic) ->
+    {ok, Method, Params};
+
+request(_Module, Method, _Params) -> 
+    Msg = list_to_binary(io_lib:format("bar request ~s", [Method])),
+    {error, {500, Msg, undefined}}.
  
 init(_Identifier, _HandlerArgs) -> 
     {ok, []}.
