@@ -1,4 +1,4 @@
-# Hello PubSub
+# Hello PubSub [![Build Status](https://travis-ci.org/surik/hello_pubsub.svg)](https://travis-ci.org/surik/hello_pubsub)
 
 Publisher-Subscriber implementation over [hello](https://github.com/travelping/hello).
 
