@@ -16,10 +16,13 @@
          publish/1,
          unsubscribe/1,
          invalid_unsubscribe/1,
+         concurrency_subscribe/1,
          pubsub_validation/1]).
 
 -include_lib("common_test/include/ct.hrl").
 -include_lib("eunit/include/eunit.hrl").
+
+-define(HELLO_PUBSUB_TEST_TAB, hello_pubsub_test_tab).
 
 %%%===================================================================
 %%% Common Test callbacks
@@ -38,9 +41,17 @@ cases() ->
     [subscribe, invalid_subscribe, 
      list, 
      publish, invalid_publish, 
-     unsubscribe, invalid_unsubscribe].
+     unsubscribe, invalid_unsubscribe,
+     concurrency_subscribe].
 
 init_per_suite(Config) ->
+    Pid = spawn(fun EtsOwner() ->
+                    receive
+                        stop -> exit(normal);
+                        Any -> EtsOwner()
+                    end
+                end),
+    ?HELLO_PUBSUB_TEST_TAB = ets:new(?HELLO_PUBSUB_TEST_TAB, [named_table, public, duplicate_bag, {heir, Pid, []}]),
     Config.
 
 end_per_suite(_Config) ->
@@ -60,6 +71,7 @@ init_per_group(Group, Config) ->
 end_per_group(Group, _Config) ->
     ok = application:stop(hello_pubsub),
     ok = application:stop(hello),
+    ets:delete_all_objects(?HELLO_PUBSUB_TEST_TAB),
     ok.
 
 %%%===================================================================
@@ -67,12 +79,16 @@ end_per_group(Group, _Config) ->
 %%%===================================================================
 
 subscribe(_Config) ->
-    ok, hello_pubsub_client:subscribe(<<"test">>, <<"sub_1">>, 
-                                      fun(Msg) -> ct:pal("got ~p", [Msg]) end),
-    ok, hello_pubsub_client:subscribe(<<"test/event2">>, <<"sub_2">>, 
-                                      fun(Msg) -> ct:pal("2 got ~p", [Msg]) end),
-    ok, hello_pubsub_client:subscribe(<<"test/event3">>, <<"sub_3">>, 
-                                      fun(Msg) -> ct:pal("3 got ~p", [Msg]) end),
+    SubFun = fun(SubId, Msg) ->
+                ets:insert(?HELLO_PUBSUB_TEST_TAB, {SubId, Msg}),
+                ct:pal("~p got ~p", [SubId, Msg])
+             end,
+    ok = hello_pubsub_client:subscribe(<<"test">>, <<"sub_1">>, 
+                                       fun(Msg) -> SubFun(<<"sub_1">>, Msg) end),
+    ok = hello_pubsub_client:subscribe(<<"test/event2">>, <<"sub_2">>, 
+                                       fun(Msg) -> SubFun(<<"sub_2">>, Msg) end),
+    ok = hello_pubsub_client:subscribe(<<"test/event3">>, <<"sub_3">>, 
+                                       fun(Msg) -> SubFun(<<"sub_3">>, Msg) end),
     ok.
 
 invalid_subscribe(_Config) ->
@@ -90,7 +106,12 @@ publish(_Config) ->
     hello_pubsub_client:publish(<<"test/event2">>, <<"message2">>),
     hello_pubsub_client:publish(<<"test/event3">>, <<"message3">>),
     hello_pubsub_client:publish(<<"test">>, <<"message">>),
-    timer:sleep(500),
+    timer:sleep(1000),
+   
+    3 = length(ets:lookup(?HELLO_PUBSUB_TEST_TAB, <<"sub_1">>)),
+    1 = length(ets:lookup(?HELLO_PUBSUB_TEST_TAB, <<"sub_2">>)),
+    1 = length(ets:lookup(?HELLO_PUBSUB_TEST_TAB, <<"sub_3">>)),
+    ets:delete_all_objects(?HELLO_PUBSUB_TEST_TAB),
     ok.
 
 invalid_publish(_Config) ->
@@ -107,6 +128,35 @@ unsubscribe(_Config) ->
 
 invalid_unsubscribe(_Config) ->
     ?assertError(badarg, hello_pubsub_client:unsubscribe("test/event2")),
+    ok.
+
+concurrency_subscribe(_Config) ->
+    Count = 100,
+    [begin 
+         Id = <<"sub_", (integer_to_binary(N))/binary>>,
+         spawn(fun() ->
+             hello_pubsub_client:subscribe(<<"test">>, Id, 
+                                           fun(Msg) -> 
+                                                ets:insert(?HELLO_PUBSUB_TEST_TAB, {Id, Msg})
+                                           end)
+         end)
+     end || N <- lists:seq(1, Count)],
+    timer:sleep(100),
+
+    hello_pubsub_client:publish(<<"test">>, <<"message">>),
+    timer:sleep(200),
+
+    [begin 
+         Id = <<"sub_", (integer_to_binary(N))/binary>>,
+         ok = hello_pubsub_client:unsubscribe(Id)
+     end || N <- lists:seq(1, Count)],
+    timer:sleep(100),
+
+    0 = length(hello_pubsub_client:list()),
+    Count = length(ets:tab2list(?HELLO_PUBSUB_TEST_TAB)),
+
+    ets:delete_all_objects(?HELLO_PUBSUB_TEST_TAB),
+    
     ok.
 
 pubsub_validation(_Config) ->
