@@ -79,22 +79,25 @@ end_per_group(Group, _Config) ->
 %%%===================================================================
 
 subscribe(_Config) ->
-    SubFun = fun(SubId, Msg) ->
+    SubFun = fun(Topic, SubId, Msg) ->
                 ets:insert(?HELLO_PUBSUB_TEST_TAB, {SubId, Msg}),
                 ct:pal("~p got ~p", [SubId, Msg])
              end,
-    ok = hello_pubsub_client:subscribe(<<"test">>, <<"sub_1">>, 
-                                       fun(Msg) -> SubFun(<<"sub_1">>, Msg) end),
-    ok = hello_pubsub_client:subscribe(<<"test/event2">>, <<"sub_2">>, 
-                                       fun(Msg) -> SubFun(<<"sub_2">>, Msg) end),
-    ok = hello_pubsub_client:subscribe(<<"test/event3">>, <<"sub_3">>, 
-                                       fun(Msg) -> SubFun(<<"sub_3">>, Msg) end),
+    ok = hello_pubsub_client:subscribe(<<"test">>, <<"sub_1">>, SubFun),
+    ok = hello_pubsub_client:subscribe(<<"test/event2">>, <<"sub_2">>, SubFun),
+    ok = hello_pubsub_client:subscribe(<<"test/event3">>, <<"sub_3">>, SubFun),
     ok.
 
 invalid_subscribe(_Config) ->
-    ?assertError(badarg, hello_pubsub_client:subscribe("test", fun(Msg) -> ct:pal("got ~p", [Msg]) end)),
+    ?assertError(badarg, hello_pubsub_client:subscribe("test", 
+                                                       fun(_, _, Msg) -> 
+                                                           ct:pal("got ~p", [Msg]) 
+                                                       end)),
     ?assertError(badarg, hello_pubsub_client:subscribe(<<"test">>, not_fun)),
     ?assertError(badarg, hello_pubsub_client:subscribe(<<"test">>, "sub_1",
+                                                       fun(_, _, Msg) -> ct:pal("got ~p", [Msg]) end)),
+    % function should be with arity 3
+    ?assertError(badarg, hello_pubsub_client:subscribe(<<"test">>, <<"sub_1">>,
                                                        fun(Msg) -> ct:pal("got ~p", [Msg]) end)),
     ok.
 
@@ -136,7 +139,7 @@ concurrency_subscribe(_Config) ->
          Id = <<"sub_", (integer_to_binary(N))/binary>>,
          spawn(fun() ->
              hello_pubsub_client:subscribe(<<"test">>, Id, 
-                                           fun(Msg) -> 
+                                           fun(_, _, Msg) -> 
                                                 ets:insert(?HELLO_PUBSUB_TEST_TAB, {Id, Msg})
                                            end)
          end)

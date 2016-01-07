@@ -123,7 +123,9 @@ publish(#{<<"topic">> := Topic0, <<"message">> := Message}) ->
     [begin
         Client = get_client(Sink),
         Event = {<<"Sink.Event">>, 
-                 #{<<"message">> => Message, <<"id">> => Name}, 
+                 #{<<"message">> => Message, 
+                   <<"topic">> => format_topic(Topic),
+                   <<"id">> => Name},
                  [{notification, true}]},
         ok = call(Client, Event)
      end || {Name, Sink} <- Sinks].
@@ -138,6 +140,9 @@ parse_topic(Topic) ->
     [binary_to_atom(Bin, utf8) 
      || Bin <- binary:split(Topic, <<"/">>, [global, trim]), 
         Bin /= <<"">>].
+
+format_topic(Topic) ->
+    list_to_binary(string:join([atom_to_list(T) || T <- Topic], "/")).
 
 get_client(Sink) ->
     case ets:lookup(?HELLO_PUBSUB_CLIENTS_TAB, Sink) of

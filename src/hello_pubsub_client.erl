@@ -56,9 +56,12 @@ request(_Module, Method, Params) ->
 init(_Identifier, _HandlerArgs) -> 
     {ok, []}.
  
-handle_request(_Context, <<"Sink.Event">>, #{<<"id">> := Id, <<"message">> := Msg}, State) ->
+handle_request(_Context, <<"Sink.Event">>, 
+               #{<<"topic">> := Topic, 
+                 <<"id">> := Id, 
+                 <<"message">> := Msg}, State) ->
     case ets:lookup(?HELLO_CLIENT_PUBSUB_TAB, Id) of
-        [{Id, _, Fun}] -> Fun(Msg);
+        [{Id, _, Fun}] -> Fun(Topic, Id, Msg);
         _ -> skip
     end,
     {stop, normal, {ok, ok}, State}.
@@ -86,13 +89,17 @@ subscribe(Topic, Name, Fun) ->
 -spec subscribe(binary(), binary(), function(), binary() | string()) -> 
     ok | {error, term()}.
 subscribe(Topic, Name, Fun, Sink0) 
-  when is_binary(Topic), is_binary(Name), is_function(Fun) -> 
-    Sink = hello_lib:to_binary(Sink0),
-    case call(<<"Pubsub.Subscribe">>, #{topic => Topic, name => Name, sink => Sink}) of
-        ok -> 
-            true = ets:insert_new(?HELLO_CLIENT_PUBSUB_TAB, {Name, Topic, Fun}),
-            ok;
-        Error -> Error
+  when is_binary(Topic), is_binary(Name), is_function(Fun) ->
+    {arity, Arity} = erlang:fun_info(Fun, arity),
+    if Arity =:= 3 ->
+        Sink = hello_lib:to_binary(Sink0),
+        case call(<<"Pubsub.Subscribe">>, #{topic => Topic, name => Name, sink => Sink}) of
+            ok -> 
+                true = ets:insert_new(?HELLO_CLIENT_PUBSUB_TAB, {Name, Topic, Fun}),
+                ok;
+            Error -> Error
+        end;
+    true -> error(badarg)
     end;
 subscribe(_, _, _, _) -> error(badarg).
 
