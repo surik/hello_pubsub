@@ -64,13 +64,12 @@ init_per_group(Group, Config) ->
             application:set_env(hello_pubsub, connect_to, "http://127.0.0.1:8081"),
             application:set_env(hello_pubsub, sink, "http://127.0.0.1:8081/sink")
     end,
-    {ok, _} = application:ensure_all_started(hello),
     {ok, _} = application:ensure_all_started(hello_pubsub),
     Config.
 
 end_per_group(Group, _Config) ->
     ok = application:stop(hello_pubsub),
-    ok = application:stop(hello),
+    ok = application:stop(hello), % easy way to stop hello listeners and clean tables
     ets:delete_all_objects(?HELLO_PUBSUB_TEST_TAB),
     ok.
 
