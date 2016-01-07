@@ -115,7 +115,7 @@ list() ->
 publish(#{<<"topic">> := Topic0, <<"message">> := Message}) ->
     Topic = parse_topic(Topic0),
     Sinks = ets:foldl(fun({Name, T, Sink}, Acc) ->
-                case lists:prefix(Topic, T) of 
+                case lists:prefix(T, Topic) of 
                     true -> [{Name, Sink} | Acc];
                     false -> Acc
                 end
