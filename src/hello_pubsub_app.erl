@@ -1,3 +1,4 @@
+% @private
 -module(hello_pubsub_app).
 
 -behaviour(application).
@@ -13,8 +14,8 @@ start(_StartType, _StartArgs) ->
     case application:get_env(hello_pubsub, listener_url) of
         undefined -> skip;
         {ok, Url} ->
-            ok = hello_pubsub:create_tables(),
-            ok = hello:bind_handler(Url, hello_pubsub, [])
+            ok = hello_pubsub_handler:create_tables(),
+            ok = hello:bind_handler(Url, hello_pubsub_handler, [])
     end,
     hello_pubsub_client:start(),
     hello_pubsub_sup:start_link().

@@ -1,3 +1,4 @@
+% @private
 -module(hello_pubsub_client).
 
 -export([start/0,
@@ -12,7 +13,7 @@
          handle_info/3,
          terminate/3,
 
-         subscribe/2, subscribe/3,
+         subscribe/2, subscribe/3, subscribe/4,
          unsubscribe/1, 
          unsubscribe_topic/1,
          list/0, list/1,
@@ -147,7 +148,7 @@ call(Method, Args) ->
 call({Method, Args, _} = Req) ->
     case application:get_env(hello_pubsub, connect_to, local) of
         local -> 
-            Name = hello_lib:to_binary(hello_pubsub:name()),
+            Name = hello_lib:to_binary(hello_pubsub_handler:name()),
             hello_service:call(Name, undefined, {Method, hello_json:decode(hello_json:encode(Args))});
         _ -> hello_client:call(?MODULE, Req)
     end.

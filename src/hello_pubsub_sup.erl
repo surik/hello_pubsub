@@ -1,3 +1,4 @@
+% @private
 -module(hello_pubsub_sup).
 
 -behaviour(supervisor).

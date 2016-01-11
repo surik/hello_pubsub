@@ -82,32 +82,32 @@ subscribe(_Config) ->
                 ets:insert(?HELLO_PUBSUB_TEST_TAB, {SubId, Msg}),
                 ct:pal("~p got ~p", [SubId, Msg])
              end,
-    ok = hello_pubsub_client:subscribe(<<"test">>, <<"sub_1">>, SubFun),
-    ok = hello_pubsub_client:subscribe(<<"test/event2">>, <<"sub_2">>, SubFun),
-    ok = hello_pubsub_client:subscribe(<<"test/event3">>, <<"sub_3">>, SubFun),
+    ok = hello_pubsub:subscribe(<<"test">>, <<"sub_1">>, SubFun),
+    ok = hello_pubsub:subscribe(<<"test/event2">>, <<"sub_2">>, SubFun),
+    ok = hello_pubsub:subscribe(<<"test/event3">>, <<"sub_3">>, SubFun),
     ok.
 
 invalid_subscribe(_Config) ->
-    ?assertError(badarg, hello_pubsub_client:subscribe("test", 
+    ?assertError(badarg, hello_pubsub:subscribe("test", 
                                                        fun(_, _, Msg) -> 
                                                            ct:pal("got ~p", [Msg]) 
                                                        end)),
-    ?assertError(badarg, hello_pubsub_client:subscribe(<<"test">>, not_fun)),
-    ?assertError(badarg, hello_pubsub_client:subscribe(<<"test">>, "sub_1",
+    ?assertError(badarg, hello_pubsub:subscribe(<<"test">>, not_fun)),
+    ?assertError(badarg, hello_pubsub:subscribe(<<"test">>, "sub_1",
                                                        fun(_, _, Msg) -> ct:pal("got ~p", [Msg]) end)),
     % function should be with arity 3
-    ?assertError(badarg, hello_pubsub_client:subscribe(<<"test">>, <<"sub_1">>,
+    ?assertError(badarg, hello_pubsub:subscribe(<<"test">>, <<"sub_1">>,
                                                        fun(Msg) -> ct:pal("got ~p", [Msg]) end)),
     ok.
 
 list(_Config) ->
-    3 = length(hello_pubsub_client:list()),
+    3 = length(hello_pubsub:list()),
     ok.
 
 publish(_Config) ->
-    hello_pubsub_client:publish(<<"test/event2">>, <<"message2">>),
-    hello_pubsub_client:publish(<<"test/event3">>, <<"message3">>),
-    hello_pubsub_client:publish(<<"test">>, <<"message">>),
+    hello_pubsub:publish(<<"test/event2">>, <<"message2">>),
+    hello_pubsub:publish(<<"test/event3">>, <<"message3">>),
+    hello_pubsub:publish(<<"test">>, <<"message">>),
     timer:sleep(1000),
    
     3 = length(ets:lookup(?HELLO_PUBSUB_TEST_TAB, <<"sub_1">>)),
@@ -117,19 +117,19 @@ publish(_Config) ->
     ok.
 
 invalid_publish(_Config) ->
-    ?assertError(badarg, hello_pubsub_client:publish("test/event2", <<"message2">>)),
+    ?assertError(badarg, hello_pubsub:publish("test/event2", <<"message2">>)),
     ok.
 
 unsubscribe(_Config) ->
-    ok = hello_pubsub_client:unsubscribe(<<"sub_1">>),
-    ok = hello_pubsub_client:unsubscribe(<<"sub_2">>),
-    1 = length(hello_pubsub_client:list()),
-    ok = hello_pubsub_client:unsubscribe(<<"sub_3">>),
-    0 = length(hello_pubsub_client:list()),
+    ok = hello_pubsub:unsubscribe(<<"sub_1">>),
+    ok = hello_pubsub:unsubscribe(<<"sub_2">>),
+    1 = length(hello_pubsub:list()),
+    ok = hello_pubsub:unsubscribe(<<"sub_3">>),
+    0 = length(hello_pubsub:list()),
     ok.
 
 invalid_unsubscribe(_Config) ->
-    ?assertError(badarg, hello_pubsub_client:unsubscribe("test/event2")),
+    ?assertError(badarg, hello_pubsub:unsubscribe("test/event2")),
     ok.
 
 concurrency_subscribe(_Config) ->
@@ -137,7 +137,7 @@ concurrency_subscribe(_Config) ->
     [begin 
          Id = <<"sub_", (integer_to_binary(N))/binary>>,
          spawn(fun() ->
-             hello_pubsub_client:subscribe(<<"test">>, Id, 
+             hello_pubsub:subscribe(<<"test">>, Id, 
                                            fun(_, _, Msg) -> 
                                                 ets:insert(?HELLO_PUBSUB_TEST_TAB, {Id, Msg})
                                            end)
@@ -145,16 +145,16 @@ concurrency_subscribe(_Config) ->
      end || N <- lists:seq(1, Count)],
     timer:sleep(100),
 
-    hello_pubsub_client:publish(<<"test">>, <<"message">>),
+    hello_pubsub:publish(<<"test">>, <<"message">>),
     timer:sleep(200),
 
     [begin 
          Id = <<"sub_", (integer_to_binary(N))/binary>>,
-         ok = hello_pubsub_client:unsubscribe(Id)
+         ok = hello_pubsub:unsubscribe(Id)
      end || N <- lists:seq(1, Count)],
     timer:sleep(100),
 
-    0 = length(hello_pubsub_client:list()),
+    0 = length(hello_pubsub:list()),
     Count = length(ets:tab2list(?HELLO_PUBSUB_TEST_TAB)),
 
     ets:delete_all_objects(?HELLO_PUBSUB_TEST_TAB),
@@ -164,38 +164,38 @@ concurrency_subscribe(_Config) ->
 pubsub_validation(_Config) ->
     Mod = hello_pubsub,
     SubscrMsg = #{<<"name">> => <<"bin">>, <<"topic">> => <<"bin">>, <<"sink">> => <<"local">>},
-    BadSubscrMsg = #{<<"name">> => "sting", <<"topic">> => "sting", <<"sink">> => "local"},
+    BadSubscrMsg = #{<<"name">> => "string", <<"topic">> => "string", <<"sink">> => "local"},
     BadSubscrMsg1 = maps:put(<<"name">>, <<"bin">>, BadSubscrMsg),
     BadSubscrMsg2 = maps:put(<<"topic">>, <<"bin">>, BadSubscrMsg1),
     BadSubscrMsg3 = maps:put(<<"topic">>, "string", SubscrMsg),
     PublishMsg = fun(Msg) -> #{<<"topic">> => <<"root">>, <<"message">> => Msg} end,
 
-    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Subscribe">>, #{}),
-    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Subscribe">>, #{<<"unknown_params">> => "fdf"}),
-    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Subscribe">>, BadSubscrMsg),
-    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Subscribe">>, BadSubscrMsg1),
-    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Subscribe">>, BadSubscrMsg2),
-    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Subscribe">>, BadSubscrMsg3),
-    {ok, <<"Pubsub.Subscribe">>, _} = hello_pubsub:request(Mod, <<"Pubsub.Subscribe">>, SubscrMsg),
+    {error, _} = hello_pubsub_handler:request(Mod, <<"Pubsub.Subscribe">>, #{}),
+    {error, _} = hello_pubsub_handler:request(Mod, <<"Pubsub.Subscribe">>, #{<<"unknown_params">> => "fdf"}),
+    {error, _} = hello_pubsub_handler:request(Mod, <<"Pubsub.Subscribe">>, BadSubscrMsg),
+    {error, _} = hello_pubsub_handler:request(Mod, <<"Pubsub.Subscribe">>, BadSubscrMsg1),
+    {error, _} = hello_pubsub_handler:request(Mod, <<"Pubsub.Subscribe">>, BadSubscrMsg2),
+    {error, _} = hello_pubsub_handler:request(Mod, <<"Pubsub.Subscribe">>, BadSubscrMsg3),
+    {ok, <<"Pubsub.Subscribe">>, _} = hello_pubsub_handler:request(Mod, <<"Pubsub.Subscribe">>, SubscrMsg),
 
-    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Unsubscribe">>, #{}),
-    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Unsubscribe">>, #{<<"unknown_params">> => "fdf"}),
-    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Unsubscribe">>, #{<<"name">> => "string"}),
-    {ok, <<"Pubsub.Unsubscribe">>, _} = hello_pubsub:request(Mod, <<"Pubsub.Unsubscribe">>, 
-                                                             #{<<"name">> => <<"bin">>}),
+    {error, _} = hello_pubsub_handler:request(Mod, <<"Pubsub.Unsubscribe">>, #{}),
+    {error, _} = hello_pubsub_handler:request(Mod, <<"Pubsub.Unsubscribe">>, #{<<"unknown_params">> => "fdf"}),
+    {error, _} = hello_pubsub_handler:request(Mod, <<"Pubsub.Unsubscribe">>, #{<<"name">> => "string"}),
+    {ok, <<"Pubsub.Unsubscribe">>, _} = hello_pubsub_handler:request(Mod, <<"Pubsub.Unsubscribe">>, 
+                                                                     #{<<"name">> => <<"bin">>}),
 
-    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.List">>, #{<<"topic">> => "topic"}),
-    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.List">>, #{<<"unknown_params">> => "fdf"}),
-    {ok, <<"Pubsub.List">>, _} = hello_pubsub:request(Mod, <<"Pubsub.List">>, #{}),
-    {ok, <<"Pubsub.List">>, _} = hello_pubsub:request(Mod, <<"Pubsub.List">>, #{<<"topic">> => <<"topic">>}),
+    {error, _} = hello_pubsub_handler:request(Mod, <<"Pubsub.List">>, #{<<"topic">> => "topic"}),
+    {error, _} = hello_pubsub_handler:request(Mod, <<"Pubsub.List">>, #{<<"unknown_params">> => "fdf"}),
+    {ok, <<"Pubsub.List">>, _} = hello_pubsub_handler:request(Mod, <<"Pubsub.List">>, #{}),
+    {ok, <<"Pubsub.List">>, _} = hello_pubsub_handler:request(Mod, <<"Pubsub.List">>, #{<<"topic">> => <<"topic">>}),
 
-    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Publish">>, #{}),
-    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Publish">>, #{<<"topic">> => "list"}),
-    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Publish">>, #{<<"topic">> => <<"bin">>}),
-    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.Publish">>, #{<<"unknown_params">> => "fdf"}),
-    {ok, <<"Pubsub.Publish">>, _} = hello_pubsub:request(Mod, <<"Pubsub.Publish">>, PublishMsg(<<"message">>)),
-    {ok, <<"Pubsub.Publish">>, _} = hello_pubsub:request(Mod, <<"Pubsub.Publish">>, 
-                                                         PublishMsg(#{<<"payload">> => <<"message">>})),
+    {error, _} = hello_pubsub_handler:request(Mod, <<"Pubsub.Publish">>, #{}),
+    {error, _} = hello_pubsub_handler:request(Mod, <<"Pubsub.Publish">>, #{<<"topic">> => "list"}),
+    {error, _} = hello_pubsub_handler:request(Mod, <<"Pubsub.Publish">>, #{<<"topic">> => <<"bin">>}),
+    {error, _} = hello_pubsub_handler:request(Mod, <<"Pubsub.Publish">>, #{<<"unknown_params">> => "fdf"}),
+    {ok, <<"Pubsub.Publish">>, _} = hello_pubsub_handler:request(Mod, <<"Pubsub.Publish">>, PublishMsg(<<"message">>)),
+    {ok, <<"Pubsub.Publish">>, _} = hello_pubsub_handler:request(Mod, <<"Pubsub.Publish">>, 
+                                                                 PublishMsg(#{<<"payload">> => <<"message">>})),
 
-    {error, _} = hello_pubsub:request(Mod, <<"Pubsub.UndefMethod">>, #{}),
+    {error, _} = hello_pubsub_handler:request(Mod, <<"Pubsub.UndefMethod">>, #{}),
     ok.
