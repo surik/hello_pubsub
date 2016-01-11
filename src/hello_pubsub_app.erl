@@ -15,7 +15,7 @@ start(_StartType, _StartArgs) ->
         undefined -> skip;
         {ok, Url} ->
             ok = hello_pubsub_handler:create_tables(),
-            ok = hello:bind_handler(Url, hello_pubsub_handler, [])
+            ok = hello:bind(Url, hello_pubsub_handler, [])
     end,
     hello_pubsub_client:start(),
     hello_pubsub_sup:start_link().

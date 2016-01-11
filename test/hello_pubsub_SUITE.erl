@@ -61,8 +61,14 @@ init_per_group(Group, Config) ->
     case Group of
         local -> ok;
         remote -> 
+            application:ensure_all_started(hello),
             application:set_env(hello_pubsub, connect_to, "http://127.0.0.1:8081"),
-            application:set_env(hello_pubsub, sink_listener_url, "http://127.0.0.1:8081")
+            application:set_env(hello_pubsub, sink_listener_url, "http://127.0.0.1:8082"),
+            spawn(fun() ->
+                hello:start_listener("http://127.0.0.1:8081"),
+                hello:start_listener("http://127.0.0.1:8082"),
+                receive ok -> ok end
+            end)
     end,
     {ok, _} = application:ensure_all_started(hello_pubsub),
     Config.
