@@ -29,8 +29,12 @@ start() ->
     case application:get_env(hello_pubsub, connect_to, local) of
         local -> hello_service:register_link(?MODULE, []);
         Url ->
-            ok = hello:bind(Url, ?MODULE, []),
-            hello_client:start_supervised(?MODULE, Url ++ "/pubsub", [], [], [])
+            case application:get_env(hello_pubsub, sink_listener_url, local) of
+                local -> hello_service:register_link(?MODULE, []);
+                SinkUrl ->
+                    ok = hello:bind(SinkUrl, ?MODULE, []),
+                    hello_client:start_supervised(?MODULE, Url ++ "/pubsub", [], [], [])
+            end
     end.
 
 -spec create_tables() -> ok | {error, term()}.
@@ -84,7 +88,11 @@ subscribe(Topic, Fun) ->
 
 -spec subscribe(binary(), binary(), function()) -> ok | {error, term()}.
 subscribe(Topic, Name, Fun) -> 
-    DefaultSink = application:get_env(hello_pubsub, sink, "local"),
+    DefaultSink = case application:get_env(hello_pubsub, sink_listener_url, "local") of
+        Sink when is_list(Sink) -> Sink ++ "/sink";
+        Sink when is_binary(Sink) -> <<Sink/binary,  "/sink">>;
+        _ -> "local"
+    end,
     subscribe(Topic, Name, Fun, hello_lib:to_binary(DefaultSink)).
 
 -spec subscribe(binary(), binary(), function(), binary() | string()) -> 

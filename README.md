@@ -22,11 +22,11 @@ and ensure `hello_pubsub` is starder before your application:
     
 `hello_pubsub` has the following environment options:
 
-* __listener_url__ - URL for binding pubsub API. When `hello_pubsub` is started `hello_pubsub` handler will be binded to this listener. This makes pubsub API available on `<listener_url>/pubsub`. `http://127.0.0.1:8081` by default.
+* __pubsub_listener_url__ - URL for binding pubsub API. When `hello_pubsub` is started `hello_pubsub` handler will be binded to this listener. This makes pubsub API available on `<listener_url>/pubsub`. `http://127.0.0.1:8081` by default.
+
+* __sink_listener_url__ - default URL for sending events. `local` means you will be getting notification on local node. `local` by default.
 
 * __connect_to__ - URL for client connect. `local` means all pubsub APIs will be evaluated on local node. `local` by default.
-
-* __sink__ - default URL for sending events. `local` means you will be getting notification on local node. `local` by default.
 
 
 Example:

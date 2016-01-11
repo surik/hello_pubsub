@@ -11,7 +11,7 @@
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
-    case application:get_env(hello_pubsub, listener_url) of
+    case application:get_env(hello_pubsub, pubsub_listener_url) of
         undefined -> skip;
         {ok, Url} ->
             ok = hello_pubsub_handler:create_tables(),

@@ -62,7 +62,7 @@ init_per_group(Group, Config) ->
         local -> ok;
         remote -> 
             application:set_env(hello_pubsub, connect_to, "http://127.0.0.1:8081"),
-            application:set_env(hello_pubsub, sink, "http://127.0.0.1:8081/sink")
+            application:set_env(hello_pubsub, sink_listener_url, "http://127.0.0.1:8081")
     end,
     {ok, _} = application:ensure_all_started(hello_pubsub),
     Config.

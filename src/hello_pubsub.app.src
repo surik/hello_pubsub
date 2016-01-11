@@ -10,8 +10,8 @@
                  ]},
   {mod, { hello_pubsub_app, []}},
   {env, [
-         {listener_url, "http://127.0.0.1:8081"},
-         {connect_to, local},
-         {sink, local}
+         {pubsub_listener_url, "http://127.0.0.1:8081"},
+         {sink_listener_url, local},
+         {connect_to, local}
         ]}
  ]}.
